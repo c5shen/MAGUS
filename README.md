@@ -1,5 +1,5 @@
-# MAGUS
-Multiple Sequence Alignment using Graph Clustering
+# constrained-MAGUS
+A modified version of the original MAGUS (Multiple Sequence Alignment using Graph Clustering) to allow the user to supply an alignment in the input as a constraint (i.e., this input alignment will not change during the MAGUS alignment).
 
 - - - -
 
