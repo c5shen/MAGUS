@@ -24,13 +24,32 @@ MAGUS tasks will recursively generate MAGUS tasks over large subsets and MAFFT t
 def mainAlignmentTask():    
     args = {"workingDir" : Configs.workingDir, "outputFile" : Configs.outputPath,
             "subalignmentPaths" : Configs.subalignmentPaths, "sequencesPath" : Configs.sequencesPath,
-            "backbonePaths" : Configs.backbonePaths, "guideTree" : Configs.guideTree}
+            "backbonePaths" : Configs.backbonePaths, "guideTree" : Configs.guideTree,
+            "inputConstraint": Configs.inputConstraint}
+    ######## added potential input constraint path to alignment context
     task = createAlignmentTask(args)
     task.submitTask()
     task.awaitTask()
     
 def createAlignmentTask(args):
     return task.Task(taskType = "runAlignmentTask", outputFile = args["outputFile"], taskArgs = args)
+
+# create a task to update the subalignment
+def createUpdateSubalignmentTask(args):
+    return task.Task(taskType = "runUpdateSubalignmentTask",
+                     outputFile = args["outputFile"], taskArgs = args)
+
+# run the "update subalignment" task
+def runUpdateSubalignmentTask(**kwargs):
+    aln = sequenceutils.readFromFastaOrdered(subalignmentPath)
+    
+    # remove taxa that are in constraintTaxa
+    for taxon in constraintTaxa:
+        if taxon in aln:
+            aln.pop(taxon)
+    
+    # delete all-gap columns for aln and write to outputFile
+    sequenceutils.cleanGapColumnsFromAlignment(aln, outputFile)
 
 def runAlignmentTask(**kwargs):
     '''
@@ -82,7 +101,47 @@ def alignSubsets(context):
             subalignmentTask = createAlignmentTask({"outputFile" : subalignmentPath, "workingDir" : subalignmentDir, 
                                                     "sequencesPath" : file, "guideTree" : Configs.recurseGuideTree})   
             context.subalignmentTasks.append(subalignmentTask)
-                
+
     task.submitTasks(context.subalignmentTasks)
     Configs.log("Prepared {} subset alignment tasks..".format(len(context.subalignmentTasks)))
+    
+    ######## for constrained MAGUS ########
+    # before running mergeSubAlignments task, we need to update the subalignments
+    # by removing any input constraint sequences, and making the input constraint
+    # as a new subalignment.
+
+    if context.inputConstraint:
+        Configs.log("Detected an input constraint alignment: {}".format(
+            context.inputConstraint) + ", using it as one of the subalignments.")
+        
+        # read taxon names from it
+        constraint_unaln = sequenceutils.readFromFasta(context.sequencesPath,
+                removeDashes=True)    
+        context.constraintTaxa = [seq.tag for seq in constraint_unaln]
+       
+        # update current subalignments to remove any constraint taxa
+        for subalignmentPath in context.subalignmentPaths:
+            # overwriting existing subalignment path for now (avoiding
+            # creating new files)
+            updateSubalignmentTask = createUpdateSubalignmentTask(
+                    {'subalignmentPath': subalignmentPath,
+                     'outputFile': subalignmentPath,
+                     'constraintTaxa': context.constraintTaxa})
+            context.updateSubalignmentTasks.append(updateSubalignmentTask)
+        task.submitTasks(context.updateSubalignmentTasks)
+        # BOUNDARY CASE: removing taxa may have a chance of removing
+        #                ALL taxa from a subalignment. For these subalignments
+        #                remove them from the context list
+        newSubalignmentPaths = []
+        for subalignmentPath in context.subalignmentPaths:
+            if os.stat(subalignmentPath).st_size > 0:
+                newSubalignmentPaths.append(subalignmentPath)
+        Configs.log("{}/{} original subalignments are modified and preserved".format(
+            len(newSubalignmentPaths), len(context.subalignmentPaths)) + 
+            " after removing input constraint taxa.")
+        context.subalignmentPaths = newSubalignmentPaths
+
+        # finally, add input constraint as one of the subalignment
+        context.subalignmentPaths.append(context.inputConstraint)
+        Configs.log("Added the input constraint alignment as one of the subalignment.")
 

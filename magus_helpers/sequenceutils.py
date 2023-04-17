@@ -119,6 +119,19 @@ def writePhylip(alignment, filePath, taxa = None):
         for line in lines:
             textFile.write(line)
 
+def cleanGapColumnsFromAlignment(align, cleanFile):
+    values = list(align.values())
+    keepCols = []
+    for i in range(len(values[0].seq)):
+        for j in range(len(values)):
+            if values[j].seq[i] != '-':
+                keepCols.append(i)
+                break
+    #print("Removing gap columns.. Kept {} out of {}..".format(len(keepCols), len(values[0].seq)))
+    for s in values:
+        s.seq = ''.join(s.seq[idx] for idx in keepCols)
+    writeFasta(align, cleanFile)
+
 def cleanGapColumns(filePath, cleanFile = None):
     align = readFromFasta(filePath, False)
     values = list(align.values())

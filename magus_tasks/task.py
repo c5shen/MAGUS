@@ -21,7 +21,10 @@ This also serves the purpose of allowing aborted MAGUS runs to pick up where the
 
 class Task:
     
+    # 4.17.2023 - modified by Chengze Shen
+    # added a new function module map for updating subalignments
     functionModuleMap = {"runCommand" : "magus_tools.external_tools",
+                         "runUpdateSubalignmentTask": "magus_align.aligner",
                          "runAlignmentTask" : "magus_align.aligner",
                          "recordGapCounts" : "magus_align.merge.alignment_writer",
                          "buildInducedSubalignment" : "magus_align.merge.alignment_writer",

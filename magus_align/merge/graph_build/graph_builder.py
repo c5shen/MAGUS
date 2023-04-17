@@ -106,7 +106,10 @@ def assignBackboneTaxa(context, numTaxa, unalignedFile):
     backbone = {}
     for subset in context.subsets:
         random.shuffle(subset)
-        for taxon in subset[:numTaxa]:
+        ##### 4.17.2023 - added by Chengze Shen
+        # added a boundary case checking, making sure that the number of 
+        # taxa used from a subset is not over its size.
+        for taxon in subset[:min(numTaxa, len(subset))]:
             backbone[taxon] = context.unalignedSequences[taxon]
     sequenceutils.writeFasta(backbone, unalignedFile)
     return backbone

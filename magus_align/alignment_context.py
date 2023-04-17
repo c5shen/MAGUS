@@ -33,7 +33,7 @@ class AlignmentContext:
         self.subalignments = []
         self.taxonSubsetMap = {}
         self.taxonSubalignmentMap = {}
-                
+
         self.backboneTaxa = {}
         self.backboneExtend = set()
         self.backboneSubalignment = {}
@@ -41,7 +41,12 @@ class AlignmentContext:
         self.subalignmentTasks = []
         self.backboneTasks = []
         self.graph = None
-        
+
+        ######### for constrained MAGUS ###########
+        self.inputConstraint = None
+        self.constraintTaxa = []
+        self.updateSubalignmentTasks = []
+
         for attr in kwargs:
             vars(self)[attr] = kwargs.get(attr)
         
