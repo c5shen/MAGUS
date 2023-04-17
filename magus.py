@@ -132,6 +132,10 @@ def parseArgs():
     
     parser.add_argument("--alignsizelimit", type=float,
                         help="Size threshold for alignment compression (in GB)", required=False, default=100)
+
+    ########## for constrained MAGUS ##############
+    parser.add_argument("-C", "--inputConstraint", type=str, required=False, default=None,
+            help="An input constraint alignment that the user does not wish to change. Should contains sequences from the input sequences.")
        
     return parser.parse_args()
 

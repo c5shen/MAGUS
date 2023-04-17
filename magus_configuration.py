@@ -172,6 +172,9 @@ def buildConfigs(args):
     Configs.recurse = args.recurse.lower() == "true"
     Configs.recurseGuideTree = args.recurseguidetree
     Configs.recurseThreshold = args.recursethreshold
+
+    ############ for constrained MAGUS ###############
+    Configs.inputConstraint = args.inputConstraint
     
     Configs.logPath = os.path.join(Configs.workingDir, "log.txt")    
     Configs.errorPath = os.path.join(Configs.workingDir, "log_errors.txt")
