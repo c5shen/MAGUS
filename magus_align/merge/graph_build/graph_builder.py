@@ -27,7 +27,15 @@ def buildGraph(context):
     time1 = time.time() 
     
     context.graph = AlignmentGraph(context)
-    context.initializeSequences()
+
+    # if not having input constraint then just initialize sequences
+    # otherwise we need to use the subalignments to initialize the sequences
+    if not context.inputConstraint:
+        context.initializeSequences()
+    else:
+        # update context subset information
+        context.updateSubsetInfo()
+        Configs.log("Updated subset information (running with input constraint).")
     
     if os.path.exists(context.graph.graphPath):
         Configs.log("Found existing graph file {}".format(context.graph.graphPath))

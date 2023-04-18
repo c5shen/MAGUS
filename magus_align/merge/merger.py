@@ -17,7 +17,7 @@ from magus_configuration import Configs
 
 
 def mergeSubalignments(context):
-    Configs.log("Merging {} subaligments..".format(len(context.subalignmentPaths)))
+    Configs.log("Merging {} subalignments..".format(len(context.subalignmentPaths)))
     time1 = time.time()  
     
     buildGraph(context)

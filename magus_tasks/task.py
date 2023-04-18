@@ -61,6 +61,12 @@ class Task:
                 func = getattr(mod, self.taskType)
                 func(**self.taskArgs)
                 Configs.log("Completed a task, output file: {}".format(self.outputFile))
+            #elif self.taskType == "runUpdateSubalignmentTask":
+            #    Configs.log("Updating subalignment {}".format(self.outputFile))
+            #    mod = importlib.import_module(Task.functionModuleMap[self.taskType])
+            #    func = getattr(mod, self.taskType)
+            #    func(**self.taskArgs)
+            #    Configs.log("Completed a task (updating subalignment), output file: {}".format(self.outputFile))
             else:
                 Configs.log("File already exists: {}".format(self.outputFile))
         except Exception as exc:

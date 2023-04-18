@@ -74,7 +74,30 @@ class AlignmentContext:
                 for taxon in s:
                     self.taxonSubalignmentMap[taxon] = len(self.subalignments)
                     self.subalignments.append([taxon])
-                
+    
+    # function to update subset information after removing constraint taxa
+    # from subalignments
+    def updateSubsetInfo(self):
+        # assume that the subalignmentPaths are correct now
+        self.unalignedSequences = {}
+        # use subalignment paths to set up subsets instead of the original subsets
+        for i, subalignmentPath in enumerate(self.subalignmentPaths):
+            #filename = os.path.basename(subalignmentPath)
+            self.subsets.append([])
+            subset = sequenceutils.readFromFastaOrdered(subalignmentPath, removeDashes=True)
+            for sequence in subset:
+                self.unalignedSequences[sequence.tag] = sequence
+                self.taxonSubsetMap[sequence.tag] = i
+                self.subsets[i].append(sequence.tag)
+        if Configs.constrain:
+            self.subalignments = self.subsets
+            self.taxonSubalignmentMap = self.taxonSubsetMap
+        else:
+            for s in self.subsets:
+                for taxon in s:
+                    self.taxonSubalignmentMap[taxon] = len(self.subalignments)
+                    self.subalignments.append([taxon])
+
     def initializeBackboneSequenceMapping(self):
         if len(self.backboneTaxa) == 0:
             backboneSubsetTaxonMap = {i : subset for i, subset in enumerate(self.subsets)}

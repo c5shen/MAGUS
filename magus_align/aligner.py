@@ -41,15 +41,22 @@ def createUpdateSubalignmentTask(args):
 
 # run the "update subalignment" task
 def runUpdateSubalignmentTask(**kwargs):
-    aln = sequenceutils.readFromFastaOrdered(subalignmentPath)
+    args = {}
+    for attr in kwargs:
+        args[attr] = kwargs.get(attr)
+    aln = sequenceutils.readFromFasta(args['subalignmentPath'])
+    original_num_taxa = len(aln)
     
     # remove taxa that are in constraintTaxa
-    for taxon in constraintTaxa:
+    for taxon in args['constraintTaxa']:
         if taxon in aln:
             aln.pop(taxon)
+    Configs.log("{}/{} taxa retained in subalignment {}".format(
+        len(aln), original_num_taxa, args['subalignmentPath']))
     
     # delete all-gap columns for aln and write to outputFile
-    sequenceutils.cleanGapColumnsFromAlignment(aln, outputFile)
+    if len(aln) > 0:
+        sequenceutils.cleanGapColumnsFromAlignment(aln, args['outputFile'])
 
 def runAlignmentTask(**kwargs):
     '''
@@ -113,35 +120,46 @@ def alignSubsets(context):
     if context.inputConstraint:
         Configs.log("Detected an input constraint alignment: {}".format(
             context.inputConstraint) + ", using it as one of the subalignments.")
+
+        new_subalignDir = os.path.join(context.workingDir, "subalignments_no_constraint_taxa")
+        if not os.path.exists(new_subalignDir):
+            os.makedirs(new_subalignDir)
+
+        # await subalignment jobs to finish
+        context.awaitSubalignments()
         
         # read taxon names from it
-        constraint_unaln = sequenceutils.readFromFasta(context.sequencesPath,
+        constraint_unaln = sequenceutils.readFromFasta(context.inputConstraint,
                 removeDashes=True)    
-        context.constraintTaxa = [seq.tag for seq in constraint_unaln]
-       
-        # update current subalignments to remove any constraint taxa
+        context.constraintTaxa = list(constraint_unaln.keys())       
+
+        # create new subalignment path 
+        new_subalignmentPaths = []
         for subalignmentPath in context.subalignmentPaths:
-            # overwriting existing subalignment path for now (avoiding
-            # creating new files)
+            new_subalignmentPath = os.path.join(new_subalignDir, 
+                    os.path.basename(subalignmentPath))
+            new_subalignmentPaths.append(new_subalignmentPath)
+
             updateSubalignmentTask = createUpdateSubalignmentTask(
                     {'subalignmentPath': subalignmentPath,
-                     'outputFile': subalignmentPath,
+                     'outputFile': new_subalignmentPath,
                      'constraintTaxa': context.constraintTaxa})
             context.updateSubalignmentTasks.append(updateSubalignmentTask)
         task.submitTasks(context.updateSubalignmentTasks)
+        task.awaitTasks(context.updateSubalignmentTasks)
+
         # BOUNDARY CASE: removing taxa may have a chance of removing
         #                ALL taxa from a subalignment. For these subalignments
         #                remove them from the context list
-        newSubalignmentPaths = []
-        for subalignmentPath in context.subalignmentPaths:
-            if os.stat(subalignmentPath).st_size > 0:
-                newSubalignmentPaths.append(subalignmentPath)
-        Configs.log("{}/{} original subalignments are modified and preserved".format(
-            len(newSubalignmentPaths), len(context.subalignmentPaths)) + 
+        subalignmentPaths = []
+        for subalignmentPath in new_subalignmentPaths:
+            if os.path.exists(subalignmentPath) and os.stat(subalignmentPath).st_size > 0:
+                subalignmentPaths.append(subalignmentPath)
+        Configs.log("{}/{} original subalignments preserved".format(
+            len(subalignmentPaths), len(context.subalignmentPaths)) + 
             " after removing input constraint taxa.")
-        context.subalignmentPaths = newSubalignmentPaths
+        context.subalignmentPaths = subalignmentPaths
 
         # finally, add input constraint as one of the subalignment
         context.subalignmentPaths.append(context.inputConstraint)
         Configs.log("Added the input constraint alignment as one of the subalignment.")
-
