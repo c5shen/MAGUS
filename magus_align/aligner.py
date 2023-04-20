@@ -80,37 +80,36 @@ def runAlignmentTask(**kwargs):
 def alignSubsets(context):
     if len(context.subalignmentPaths) > 0:
         Configs.log("Subalignment paths already provided, skipping subalignments..")
-        return
-    
-    Configs.log("Building {} subalignments..".format(len(context.subsetPaths)))
-    subalignDir = os.path.join(context.workingDir, "subalignments")
-    if not os.path.exists(subalignDir):
-        os.makedirs(subalignDir)
-        
-    mafftThreshold = max(Configs.mafftSize, Configs.decompositionMaxSubsetSize, Configs.recurseThreshold)
-    
-    for file in context.subsetPaths:
-        subset = sequenceutils.readFromFasta(file)
-        subalignmentPath = os.path.join(subalignDir, "subalignment_{}".format(os.path.basename(file)))
-        context.subalignmentPaths.append(subalignmentPath)
-        
-        if os.path.exists(subalignmentPath):
-            Configs.log("Existing subalignment file detected: {}".format(subalignmentPath))       
-             
-        elif len(subset) <= mafftThreshold or not Configs.recurse:
-            Configs.log("Subset has {}/{} sequences, aligning with MAFFT..".format(len(subset), mafftThreshold))            
-            subalignmentTask = external_tools.buildMafftAlignment(file, subalignmentPath)
-            context.subalignmentTasks.append(subalignmentTask)
+    else:
+        Configs.log("Building {} subalignments..".format(len(context.subsetPaths)))
+        subalignDir = os.path.join(context.workingDir, "subalignments")
+        if not os.path.exists(subalignDir):
+            os.makedirs(subalignDir)
             
-        else:
-            Configs.log("Subset has {}/{} sequences, recursively subaligning with MAGUS..".format(len(subset), mafftThreshold))
-            subalignmentDir = os.path.join(subalignDir, os.path.splitext(os.path.basename(subalignmentPath))[0])
-            subalignmentTask = createAlignmentTask({"outputFile" : subalignmentPath, "workingDir" : subalignmentDir, 
-                                                    "sequencesPath" : file, "guideTree" : Configs.recurseGuideTree})   
-            context.subalignmentTasks.append(subalignmentTask)
+        mafftThreshold = max(Configs.mafftSize, Configs.decompositionMaxSubsetSize, Configs.recurseThreshold)
+        
+        for file in context.subsetPaths:
+            subset = sequenceutils.readFromFasta(file)
+            subalignmentPath = os.path.join(subalignDir, "subalignment_{}".format(os.path.basename(file)))
+            context.subalignmentPaths.append(subalignmentPath)
+            
+            if os.path.exists(subalignmentPath):
+                Configs.log("Existing subalignment file detected: {}".format(subalignmentPath))       
+                 
+            elif len(subset) <= mafftThreshold or not Configs.recurse:
+                Configs.log("Subset has {}/{} sequences, aligning with MAFFT..".format(len(subset), mafftThreshold))            
+                subalignmentTask = external_tools.buildMafftAlignment(file, subalignmentPath)
+                context.subalignmentTasks.append(subalignmentTask)
+                
+            else:
+                Configs.log("Subset has {}/{} sequences, recursively subaligning with MAGUS..".format(len(subset), mafftThreshold))
+                subalignmentDir = os.path.join(subalignDir, os.path.splitext(os.path.basename(subalignmentPath))[0])
+                subalignmentTask = createAlignmentTask({"outputFile" : subalignmentPath, "workingDir" : subalignmentDir, 
+                                                        "sequencesPath" : file, "guideTree" : Configs.recurseGuideTree})   
+                context.subalignmentTasks.append(subalignmentTask)
 
-    task.submitTasks(context.subalignmentTasks)
-    Configs.log("Prepared {} subset alignment tasks..".format(len(context.subalignmentTasks)))
+        task.submitTasks(context.subalignmentTasks)
+        Configs.log("Prepared {} subset alignment tasks..".format(len(context.subalignmentTasks)))
     
     ######## for constrained MAGUS ########
     # before running mergeSubAlignments task, we need to update the subalignments
